@@ -17,27 +17,42 @@ import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
 /* 
- * JSAVR v0.1 - Java Screen Audio Video Recorder
+ * JSAVR v0.2 - Java Screen Audio Video Recorder
  * Author: Sansun Suraj   Date: Sep 11, 2015.
- * JsavrMain.java - Is the main program that start the GUI frame and the rest of the code.
- * In this version, I coded the UI framework, which is just single frame having  a panel with 
- * two buttons and a status message. Buttons are not wired to any working functions yet. 
- *  
+ * JsavrMain.java - In this version, I add function to the two actionListeners buttonStart and buttonStop.
+ * To do that, two new methods are created 'startAction' and 'stopAction' and the logic been added to it. 
+ * And then these two methods are called from their respective actionListeners.
+ * Also the UI components are moved out to the main constructor method and declared static variables.
+ * Finally all the static text messages are move to the top and declared as static String variables. 
  */
 
+@SuppressWarnings("serial")
 public class JsavrMain extends JFrame {
 
 	public static final Font JSAVR_FONT = new Font("Courier New", Font.BOLD, 8);
-	public static final String JSAVR_FRAME_TITLE = "JSAVR v0.1";
+	public static final String JSAVR_FRAME_TITLE = "JSAVR v0.2";
 	public static final String JSAVR_PANEL_TITLE = "Java Screen A/V Recorder";
-	public static final String JSAVR_LABEL_INI = "Initialized...";
+	
+	public static final String JSAVR_BUTTON_START = "Start";
+	public static final String JSAVR_BUTTON_STOP  = "Stop";
+	
+	public static final String JSAVR_LABEL_INI     = "Initialized...";
+	public static final String JSAVR_LABEL_STARTED = "Started...";
+	public static final String JSAVR_LABEL_STOPPED = "Stopped...";
+	
+
+	static JFrame frame;
+	static JPanel mainPanel;
+	static JLabel labelStatus;
+	static JButton buttonStart;
+	static JButton buttonStop;
 
 	public JsavrMain() {
 
-		JButton buttonStart = new JButton("Start");
-		JButton buttonStop = new JButton("Stop");
+		buttonStart = new JButton(JSAVR_BUTTON_START);
+		buttonStop  = new JButton(JSAVR_BUTTON_STOP);
 
-		JPanel mainPanel = new JPanel();
+		mainPanel = new JPanel();
 		mainPanel.setLayout(new GridBagLayout());
 
 		GridBagConstraints constraints = new GridBagConstraints();
@@ -47,7 +62,7 @@ public class JsavrMain extends JFrame {
 		mainPanel.add(buttonStart, constraints);
 		mainPanel.add(buttonStop, constraints);
 
-		JLabel labelStatus = new JLabel(JSAVR_LABEL_INI);
+		labelStatus = new JLabel(JSAVR_LABEL_INI);
 		constraints.gridx = 0;
 		constraints.gridy = 1;
 		mainPanel.add(labelStatus, constraints);
@@ -57,11 +72,12 @@ public class JsavrMain extends JFrame {
 
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				// TODO Auto-generated method stub
-
+				startAction();
+				
 			}
 		});
-
+		
+		
 		// set border for the panel
 		mainPanel.setBorder(BorderFactory.createTitledBorder(
 				BorderFactory.createEtchedBorder(), JSAVR_PANEL_TITLE));
@@ -71,34 +87,58 @@ public class JsavrMain extends JFrame {
 
 		pack();
 		setLocationRelativeTo(null);
-		buttonStop.setEnabled(false);
-
+		buttonStop.setEnabled(false); 
+		
+		
 		buttonStop.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
-
+				stopAction();
+				
 			}
-
+			
 		});
+			
+
 
 	}
 
+	public static void startAction(){
+	    labelStatus.setVisible(true);
+		labelStatus.setText(JSAVR_LABEL_STARTED);
+		buttonStop.setEnabled(true); 
+		buttonStart.setEnabled(false); 
+		
+		frame.pack();
+	}
+	
+	public static void stopAction(){
+		
+		labelStatus.setVisible(true);
+		labelStatus.setText(JSAVR_LABEL_STOPPED);
+		buttonStop.setEnabled(false); 
+		buttonStart.setEnabled(true); 
+		
+		frame.pack();
+		
+	}
+	
 	public static void main(String[] args) {
-
+		
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 		} catch (ClassNotFoundException | InstantiationException
 				| IllegalAccessException | UnsupportedLookAndFeelException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
 		SwingUtilities.invokeLater(new Runnable() {
 
 			public void run() {
-				JFrame frame = new JsavrMain();
-
+				frame = new JsavrMain();
+				
 				frame.setFont(JSAVR_FONT);
 				frame.setTitle(JSAVR_FRAME_TITLE);
 				frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -108,6 +148,7 @@ public class JsavrMain extends JFrame {
 			}
 
 		});
+		
 
 	}
 
