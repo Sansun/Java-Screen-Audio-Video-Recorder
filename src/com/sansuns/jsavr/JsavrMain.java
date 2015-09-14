@@ -6,7 +6,14 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
 
+import javax.sound.sampled.AudioFileFormat;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.DataLine;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.TargetDataLine;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -16,21 +23,28 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
+import org.apache.log4j.Logger;
+
+import com.sansuns.jsavr.merge.MergeAudioVideo;
+import com.sansuns.jsavr.runner.AudioRecorder;
+import com.sansuns.jsavr.runner.VideoRecorder;
+
 /* 
- * JSAVR v0.2 - Java Screen Audio Video Recorder
+ * JSAVR v0.3 - Java Screen Audio Video Recorder
  * Author: Sansun Suraj   Date: Sep 11, 2015.
- * JsavrMain.java - In this version, I add function to the two actionListeners buttonStart and buttonStop.
- * To do that, two new methods are created 'startAction' and 'stopAction' and the logic been added to it. 
- * And then these two methods are called from their respective actionListeners.
- * Also the UI components are moved out to the main constructor method and declared static variables.
- * Finally all the static text messages are move to the top and declared as static String variables. 
+ * JsavrMain.java - Here I added the two new classes 'AudioRecorder.java' and 'VideoRecorder.jar' for 
+ * the audio recording and video recording.
+ *  VideoRecorder.java is using Xuggler API which basically written on FFMpeg library. This code implements Runnable and it overwrides the run method.
+ *  Used AWT Robot to capture the screen frames and using xuggler the captured frames are encoded into video.
+ *  The thread is put into sleep for the time determine by the preset frame rate and the whole process is looped
+ *  until the thread is interrupted.   
  */
 
 @SuppressWarnings("serial")
 public class JsavrMain extends JFrame {
 
 	public static final Font JSAVR_FONT = new Font("Courier New", Font.BOLD, 8);
-	public static final String JSAVR_FRAME_TITLE = "JSAVR v0.2";
+	public static final String JSAVR_FRAME_TITLE = "JSAVR v0.3";
 	public static final String JSAVR_PANEL_TITLE = "Java Screen A/V Recorder";
 	
 	public static final String JSAVR_BUTTON_START = "Start";
@@ -40,12 +54,23 @@ public class JsavrMain extends JFrame {
 	public static final String JSAVR_LABEL_STARTED = "Started...";
 	public static final String JSAVR_LABEL_STOPPED = "Stopped...";
 	
+	public static final String JSAVR_OUT_FILE_AUDIO = "./res/outputAudio.wav";
+	public static final String JSAVR_OUT_FILE_VIDEO = "./res/outputVideo.mp4";
+	public static final String JSAVR_OUT_FILE_MERGED = "./res/outputAuVuMerged.flv";
 
 	static JFrame frame;
 	static JPanel mainPanel;
 	static JLabel labelStatus;
 	static JButton buttonStart;
 	static JButton buttonStop;
+	
+	static VideoRecorder vr;
+	static Thread videoThread;
+	
+	static AudioRecorder ar;
+	static Thread audioThread;
+	
+	static Logger logger = Logger.getLogger(JsavrMain.class);
 
 	public JsavrMain() {
 
@@ -96,21 +121,61 @@ public class JsavrMain extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 				stopAction();
 				
+				//wait 6 seconds before merge
+				try {
+					Thread.sleep(6000);
+				} catch (InterruptedException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				merge();
+				
 			}
-			
 		});
-			
-
-
 	}
 
 	public static void startAction(){
+		
+		
 	    labelStatus.setVisible(true);
 		labelStatus.setText(JSAVR_LABEL_STARTED);
 		buttonStop.setEnabled(true); 
 		buttonStart.setEnabled(false); 
 		
 		frame.pack();
+		
+		vr = new VideoRecorder(JSAVR_OUT_FILE_VIDEO);
+		videoThread = new Thread(vr, "Video recording process started");
+		videoThread.start();
+		
+		File outputAudioFile = new File(JSAVR_OUT_FILE_AUDIO);
+
+		AudioFormat audioFormat = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 22050.0F, 16, 2, 4, 22050.0F, false);
+
+		DataLine.Info info = new DataLine.Info(TargetDataLine.class, audioFormat);
+		TargetDataLine targetDataLine = null;
+		try {
+			targetDataLine = (TargetDataLine) AudioSystem.getLine(info);
+			targetDataLine.open(audioFormat);
+		} catch (LineUnavailableException e) {
+			logger.info("Unable to acquire an audio recording line");
+			e.printStackTrace();
+			System.exit(1);
+		}
+
+		logger.info("AudioFormat settings: " + audioFormat.toString());
+
+		AudioFileFormat.Type targetType = AudioFileFormat.Type.WAVE;
+
+		ar = new AudioRecorder(targetDataLine, targetType, outputAudioFile);
+		
+		audioThread = new Thread(ar, "Audio recording process started");
+		ar.startAudioCapture(audioThread);
+		
+		logger.info("Starting the audio recording now...");
+		
+		
+		
 	}
 	
 	public static void stopAction(){
@@ -121,16 +186,32 @@ public class JsavrMain extends JFrame {
 		buttonStart.setEnabled(true); 
 		
 		frame.pack();
-		
+		videoThread.interrupt();
+		logger.info("Video recording stopped.");
+		ar.stopAudioCapture(audioThread);
+		logger.info("Audio recording stopped.");
+		 
 	}
 	
+	public static void merge(){
+		MergeAudioVideo mav = new MergeAudioVideo();
+		mav.mergeAudioVideo(JSAVR_OUT_FILE_AUDIO, JSAVR_OUT_FILE_VIDEO, JSAVR_OUT_FILE_MERGED);
+	}
+	
+	 
 	public static void main(String[] args) {
+		
+		//create the res dir in the current folder if not exist
+		File f = new File(JSAVR_OUT_FILE_AUDIO);
+		if(!f.exists()){
+			f.mkdir();
+			logger.info("res subdir created...");
+		}
 		
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 		} catch (ClassNotFoundException | InstantiationException
 				| IllegalAccessException | UnsupportedLookAndFeelException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
