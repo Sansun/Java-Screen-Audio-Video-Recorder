@@ -54,9 +54,10 @@ public class JsavrMain extends JFrame {
 	public static final String JSAVR_LABEL_STARTED = "Started...";
 	public static final String JSAVR_LABEL_STOPPED = "Stopped...";
 	
-	public static final String JSAVR_OUT_FILE_AUDIO = "./res/outputAudio.wav";
-	public static final String JSAVR_OUT_FILE_VIDEO = "./res/outputVideo.mp4";
-	public static final String JSAVR_OUT_FILE_MERGED = "./res/outputAuVuMerged.flv";
+	public static final String JSAVR_OUT_FILE_DIR   = "./res";
+	public static final String JSAVR_OUT_FILE_AUDIO =  "./res/outputAudio.wav";
+	public static final String JSAVR_OUT_FILE_VIDEO =   "./res/outputVideo.mp4";
+	public static final String JSAVR_OUT_FILE_MERGED =  "./res/outputAuVuMerged.flv";
 
 	static JFrame frame;
 	static JPanel mainPanel;
@@ -123,12 +124,12 @@ public class JsavrMain extends JFrame {
 				
 				//wait 6 seconds before merge
 				try {
-					Thread.sleep(6000);
+					Thread.sleep(10000);
 				} catch (InterruptedException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
-				merge();
+				//merge();
 				
 			}
 		});
@@ -190,22 +191,38 @@ public class JsavrMain extends JFrame {
 		logger.info("Video recording stopped.");
 		ar.stopAudioCapture(audioThread);
 		logger.info("Audio recording stopped.");
-		 
+		merge();
+		logger.info("Audio Video files are merged.");
 	}
 	
-	public static void merge(){
+	public static void merge() {
+		try {
+			Thread.sleep(10000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		MergeAudioVideo mav = new MergeAudioVideo();
-		mav.mergeAudioVideo(JSAVR_OUT_FILE_AUDIO, JSAVR_OUT_FILE_VIDEO, JSAVR_OUT_FILE_MERGED);
+		File audioFile = new File(JSAVR_OUT_FILE_AUDIO);
+		File videoFile = new File(JSAVR_OUT_FILE_VIDEO);
+		if(audioFile.exists() && videoFile.exists()){
+			//mav.mergeAudioVideo(JSAVR_OUT_FILE_AUDIO, JSAVR_OUT_FILE_VIDEO, JSAVR_OUT_FILE_MERGED);
+			mav.mergeAudioVideo(audioFile.getAbsolutePath(), videoFile.getAbsolutePath(), JSAVR_OUT_FILE_MERGED);
+		}else{
+			logger.info("AudioFile " + JSAVR_OUT_FILE_AUDIO + "; not found.");
+			 
+		}
 	}
 	
 	 
 	public static void main(String[] args) {
 		
 		//create the res dir in the current folder if not exist
-		File f = new File(JSAVR_OUT_FILE_AUDIO);
+				
+		File f = new File(JSAVR_OUT_FILE_DIR);
 		if(!f.exists()){
 			f.mkdir();
-			logger.info("res subdir created...");
+			logger.info(JSAVR_OUT_FILE_DIR + " subdir created...");
 		}
 		
 		try {
